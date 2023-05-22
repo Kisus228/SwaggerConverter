@@ -1,0 +1,67 @@
+using System.Collections.Generic;
+using RestSharp;
+
+namespace Client.ApiClient;
+
+public class ApiClient
+{
+    private readonly RestClient restClient;
+
+    public ApiClient(string basePath = {basePath})
+    {
+        restClient = new RestClient(basePath);
+    }
+
+    private static RestRequest PrepareRequest(string path,
+                                              Method method,
+                                              Dictionary<string, string> queryParams,
+                                              object? postBody,
+                                              Dictionary<string, string> headerParams,
+                                              Dictionary<string, string> formParams,
+                                              List<FileParameter> fileParams,
+                                              Dictionary<string, string> pathParams,
+                                              string contentType)
+    {
+        var request = new RestRequest(path, method);
+
+        foreach (var param in pathParams)
+            request.AddParameter(param.Key, param.Value, ParameterType.UrlSegment);
+
+        foreach (var param in headerParams)
+            request.AddHeader(param.Key, param.Value);
+
+        foreach (var param in queryParams)
+            request.AddQueryParameter(param.Key, param.Value);
+
+        foreach (var param in formParams)
+            request.AddParameter(param.Key, param.Value);
+
+        foreach (var param in fileParams)
+        {
+            request.AddFile(param.Name, param.GetFile, param.FileName, param.ContentType);
+        }
+
+        if (postBody != null)
+        {
+            request.AddParameter(contentType, postBody, ParameterType.RequestBody);
+        }
+
+        return request;
+    }
+
+    public RestResponse<T> CallApi<T>(string path,
+                                      Method method,
+                                      Dictionary<string, string> queryParams,
+                                      object? postBody,
+                                      Dictionary<string, string> headerParams,
+                                      Dictionary<string, string> formParams,
+                                      List<FileParameter> fileParams,
+                                      Dictionary<string, string> pathParams,
+                                      string contentType) where T : new()
+    {
+        var request = PrepareRequest(path, method, queryParams, postBody, headerParams, formParams, fileParams, pathParams, contentType);
+
+        var response = restClient.Execute<T>(request);
+        return response;
+    }
+}
